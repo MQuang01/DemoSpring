@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Employee List</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+    />
+    <link
+            rel="stylesheet"
+            type="text/css"
+            href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+    />
+    <script
+            type="text/javascript"
+            src="https://cdn.jsdelivr.net/npm/toastify-js"
+    ></script>
+    <style>
+        th {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h2>Create Department</h2>
+    <form th:action="@{'create-department'}" method="post" th:object="${department}">
+        <div class="mb-3">
+            <label for="name" class="form-label">Department Name:</label>
+            <input type="text" class="form-control" id="name" th:field="*{name}" required/>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Create Department</button>
+    </form>
+</div>
+
+<div class="container mt-4">
+    <form th:action="@{'/'}">
+        <div class="form-group mb-2">
+            <label for="searchInput" class="sr-only">Search:</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="Search"
+                   th:value="${searchText}"
+                   name="searchText">
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Search</button>
+        &nbsp;
+        <input type="button" class="btn btn-primary mb-2" value="Clear" id="btnClear" onclick="clearSearch()"/>
+    </form>
+
+</div>
+
+<div class="container mt-4">
+    <h2>Employee List</h2>
+
+    <!-- Thêm nút Create -->
+    <a th:href="@{'create'}" class="btn btn-success">Create</a>
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>#</th>
+            <th onclick="sortColumn('name')">Name</th>
+            <th onclick="sortColumn('email')">Email</th>
+            <th onclick="sortColumn('dob')">DOB</th>
+            <th onclick="sortColumn('gender')">Gender</th>
+            <th onclick="sortColumn('department.name')">Department</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="employee, loop: ${employees}">
+            <td th:text="${loop.count + (employees.number * employees.size)}"></td>
+            <td th:text="${employee.name}"></td>
+            <td th:text="${employee.email}"></td>
+            <td th:text="${employee.dob}"></td>
+            <td th:text="${employee.gender}"></td>
+            <td th:text="${employee.department.name}"></td>
+            <td>
+                <a th:href="@{'/edit/' + ${employee.id}}" class="btn btn-warning btn-sm">Edit</a>
+                <a th:onclick="return confirm('Are you sure?')" th:href="@{'/delete/' + ${employee.id}}"
+                   class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <th:block th:if="${employees.getTotalPages() >= 2 }">
+                <li class="page-item" th:class="${employees.isFirst()} ? 'page-item disabled' : 'page-item'">
+                    <a class="page-link"
+                       th:href="@{${'/?page=' + (employees.number - 1)} + '&searchText=' + ${searchText}}">Previous</a>
+                </li>
+            </th:block>
+
+
+            <!-- Loop through the pages and highlight the current page -->
+            <li th:each="pageNumber : ${#numbers.sequence(0, employees.getTotalPages() - 1)}"
+                th:class="${pageNumber == employees.number} ? 'page-item active' : 'page-item'">
+                <a class="page-link"
+                   th:id="${pageNumber}"
+                   onclick="onChangePage(this)"
+                   th:text="${pageNumber + 1}">
+                </a>
+            </li>
+
+            <th:block th:if="${employees.getTotalPages() >= 2 }">
+                <li th:if="${employees.getTotalPages() < 2 ? 'hidden' : ''}" class="page-item"
+                    th:class="${employees.isLast()} ? 'page-item disabled' : 'page-item'">
+                    <a class="page-link"
+                       th:href="@{${'/?page=' + (employees.number + 1)} + '&searchText=' + ${searchText}}">Next</a>
+                </li>
+            </th:block>
+        </ul>
+    </nav>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+
+    const msg = [[${message}]]
+
+    if (msg) {
+        Toastify({
+            text: msg,
+        }).showToast();
+    }
+
+    function clearSearch() {
+        window.location.href = "/";
+    }
+
+    function onChangePage(e) {
+        const params = getQueryParams()
+        window.location.href = `/?searchText=${params.searchText || ''}&sort=${params.sort || ''}&page=${e.id}`
+    }
+
+    function sortColumn(column) {
+        const url = window.location.href
+        const params = getQueryParams()
+        const page = params.page || 0
+        const href = `/?searchText=${params.searchText || ''}&page=${page}&`
+        if (url.includes(column)) {
+            if (url.includes('asc')) {
+                window.location.href = href + `sort=${column},desc`
+            } else {
+                window.location.href = href + `sort=${column},asc`
+            }
+        } else {
+            window.location.href = href + `sort=${column},asc`
+        }
+
+    }
+
+    function getQueryParams() {
+        const url = window.location.href;
+        const queryParams = {};
+        const queryString = url.split('?')[1];
+        if (queryString) {
+            const pairs = queryString.split('&');
+            for (let i = 0; i < pairs.length; i++) {
+                const pair = pairs[i].split('=');
+                queryParams[decodeURIComponent(pair[0])] = decodeURIComponent(pair[1] || '');
+            }
+        }
+        return queryParams;
+    }
+</script>
+</body>
+</html>
